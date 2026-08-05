@@ -10,7 +10,7 @@ CORS(app)
 
 SONGS_FILE = 'songs.json'
 DOWNLOAD_DIR = 'downloads'
-ADMIN_PASSWORD = "182015hd" # Buraya kendi şifreni yazabilirsin
+ADMIN_PASSWORD = "182015hd"
 
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
@@ -36,16 +36,13 @@ def index():
 def admin():
     return render_template('admin.html')
 
-# Hata aldığın login (Giriş) rotası eklendi
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.get_json() or {}
     password = data.get('password')
-    
     if password == ADMIN_PASSWORD:
         return jsonify({'success': True, 'message': 'Giriş başarılı'})
-    else:
-        return jsonify({'success': False, 'message': 'Hatalı şifre'}), 401
+    return jsonify({'success': False, 'message': 'Hatalı şifre!'}), 401
 
 @app.route('/api/songs', methods=['GET'])
 def get_songs():
@@ -54,12 +51,12 @@ def get_songs():
 @app.route('/api/artists', methods=['GET'])
 def get_artists():
     songs = load_songs()
-    artists = list(set(song.get('artist', 'Bilinmeyen Sanatçı') for song in songs))
+    artists = list(set(song.get('artist', 'Bilinmeyen Sanatçı') for song in songs if song.get('artist')))
     return jsonify(artists)
 
 @app.route('/api/add-song', methods=['POST'])
 def add_song():
-    data = request.json
+    data = request.get_json() or {}
     url = data.get('url')
     
     if not url:
@@ -88,6 +85,7 @@ def add_song():
                 'title': info.get('title', 'Bilinmeyen Şarkı'),
                 'artist': info.get('uploader', 'Bilinmeyen Sanatçı'),
                 'url': f'/downloads/{relative_filename}',
+                'filename': relative_filename,
                 'duration': info.get('duration', 0)
             }
 
@@ -98,6 +96,32 @@ def add_song():
             return jsonify({'success': True, 'song': song_data})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/delete-song/<song_id>', methods=['DELETE', 'POST'])
+def delete_song(song_id):
+    songs = load_songs()
+    song_to_delete = None
+    updated_songs = []
+
+    for song in songs:
+        if song.get('id') == song_id or song.get('title') == song_id:
+            song_to_delete = song
+        else:
+            updated_songs.append(song)
+
+    if song_to_delete:
+        filename = song_to_delete.get('filename') or os.path.basename(song_to_delete.get('url', ''))
+        filepath = os.path.join(DOWNLOAD_DIR, filename)
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+        
+        save_songs(updated_songs)
+        return jsonify({'success': True, 'message': 'Şarkı silindi'})
+    
+    return jsonify({'success': False, 'message': 'Şarkı bulunamadı'}), 404
 
 @app.route('/downloads/<filename>')
 def download_file(filename):
