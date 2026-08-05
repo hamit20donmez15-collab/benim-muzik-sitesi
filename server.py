@@ -39,6 +39,13 @@ def admin():
 def get_songs():
     return jsonify(load_songs())
 
+# Sanatçı listesini çeken eksik uç nokta eklendi
+@app.route('/api/artists', methods=['GET'])
+def get_artists():
+    songs = load_songs()
+    artists = list(set(song.get('artist', 'Bilinmeyen Sanatçı') for song in songs))
+    return jsonify(artists)
+
 @app.route('/api/add-song', methods=['POST'])
 def add_song():
     data = request.json
@@ -84,6 +91,11 @@ def add_song():
 @app.route('/downloads/<filename>')
 def download_file(filename):
     return send_from_directory(DOWNLOAD_DIR, filename)
+
+# Favicon hatasını engellemek için eklendi
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
