@@ -3,344 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yönetici Paneli</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Yönetici Paneli - Şarkı Ekle</title>
     <style>
-        body { 
-            background: #090d16; 
-            color: #f8fafc; 
-            min-height: 100vh; 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            padding: 40px 0;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
         }
-        .admin-card { 
-            background: rgba(30, 41, 59, 0.6); 
-            backdrop-filter: blur(16px); 
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-            border-radius: 24px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        .container {
+            background-color: #1e1e1e;
             padding: 30px;
-            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
         }
-        .form-control, .form-control:focus, .form-select {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border-radius: 14px;
-            padding: 12px 20px;
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1db954;
         }
-        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); color: #fff; }
-        .form-control::placeholder { color: #64748b; }
-        option { background: #0f172a; color: #fff; }
-        
-        .btn-custom {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            border: none;
-            border-radius: 14px;
-            padding: 12px 24px;
-            font-weight: 600;
+        p.description {
+            text-align: center;
+            font-size: 14px;
+            color: #b3b3b3;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #333;
+            background-color: #2a2a2a;
             color: white;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-            transition: all 0.2s;
+            border-radius: 5px;
+            box-sizing: border-box;
         }
-        .btn-custom:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6); background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; }
-
-        .table { color: #f8fafc; vertical-align: middle; }
-        .table > :not(caption) > * > * { background-color: transparent; color: #f8fafc; border-bottom-color: rgba(255,255,255,0.05); }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #1db954;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #1db954;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #1ed760;
+        }
+        #message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { color: #1db954; background-color: rgba(29, 185, 84, 0.1); }
+        .error { color: #ff4d4d; background-color: rgba(255, 77, 77, 0.1); }
+        .loading { color: #ffeb3b; background-color: rgba(255, 235, 59, 0.1); }
         
-        .result-item {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            transition: all 0.2s;
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #b3b3b3;
+            text-decoration: none;
+            font-size: 14px;
         }
-        .result-item:hover {
-            border-color: rgba(99, 102, 241, 0.3);
+        .back-link:hover {
+            color: white;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-<div class="container" style="max-width: 900px;">
-    <!-- Giriş Alanı -->
-    <div id="loginArea" class="admin-card text-center mx-auto" style="max-width: 450px; margin-top: 80px;">
-        <div class="mb-4">
-            <i class="fas fa-shield-alt fa-3x" style="color: #818cf8;"></i>
-        </div>
-        <h3 class="fw-bold mb-4">Yönetici Girişi</h3>
-        <input type="password" id="passwordInput" class="form-control mb-3 text-center" placeholder="Şifrenizi girin">
-        <button class="btn btn-custom w-100" onclick="login()">Giriş Yap</button>
-        <div id="loginError" class="text-danger mt-3 small d-none"><i class="fas fa-exclamation-circle me-1"></i> Hatalı şifre! (Şifre: 182015hd)</div>
+
+    <div class="container">
+        <h1>🎵 Yönetici Paneli</h1>
+        <p class="description">Sisteme yeni şarkı eklemek için YouTube linkini aşağıya yapıştır.</p>
+        
+        <input type="text" id="songUrl" placeholder="Örn: https://www.youtube.com/watch?v=...">
+        <button id="addBtn" onclick="addSong()">İndir ve Ekle</button>
+        
+        <div id="message" style="display: none;"></div>
+        
+        <a href="/" class="back-link">← Ana Sayfaya Dön (Siteyi Gör)</a>
     </div>
 
-    <!-- Admin İçerik Alanı -->
-    <div id="adminArea" class="d-none">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold m-0"><i class="fas fa-sliders-h me-2" style="color: #818cf8;"></i> Admin Paneli</h2>
-            <a href="/" class="btn btn-outline-light btn-sm rounded-pill px-3"><i class="fas fa-home me-1"></i> Siteye Git</a>
-        </div>
+    <script>
+        async function addSong() {
+            const urlInput = document.getElementById('songUrl').value.trim();
+            const messageDiv = document.getElementById('message');
+            const btn = document.getElementById('addBtn');
 
-        <!-- Tekli Şarkı Ekleme -->
-        <div class="admin-card">
-            <h4 class="fw-bold mb-4">🎵 Tekli Şarkı Ekle</h4>
-            <div class="input-group gap-2">
-                <input type="text" id="ytSearch" class="form-control" placeholder="Şarkı adı veya YouTube linki...">
-                <button class="btn btn-custom px-4" onclick="searchYoutube()"><i class="fab fa-youtube me-2"></i> Ara</button>
-            </div>
+            // Mesaj alanını temizle ve göster
+            messageDiv.style.display = 'block';
 
-            <div id="resultArea" class="d-none mt-4 p-4 rounded-4" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.05);">
-                <div class="row align-items-center">
-                    <div class="col-md-3 text-center mb-3 mb-md-0">
-                        <img id="thumbImg" src="" class="img-fluid rounded-4 shadow" style="max-height: 110px; object-fit: cover;">
-                    </div>
-                    <div class="col-md-6">
-                        <h5 id="songTitle" class="fw-bold mb-2"></h5>
-                        <input type="text" id="artistInput" class="form-control form-control-sm" placeholder="Sanatçı Adı">
-                    </div>
-                    <div class="col-md-3 text-end mt-3 mt-md-0">
-                        <button class="btn btn-success w-100 rounded-3 py-2 fw-bold shadow" onclick="downloadAndPublish()"><i class="fas fa-download me-1"></i> İndir & Yayınla</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="loadingSpinner" class="text-center mt-4 d-none">
-                <div class="spinner-border text-indigo" role="status" style="color: #818cf8;"></div>
-                <p class="mt-2 text-secondary small">Şarkı indiriliyor ve MP3'e dönüştürülüyor, lütfen bekleyin...</p>
-            </div>
-        </div>
-
-        <!-- TOPLU LİSTELEYEREK SEÇMELİ İNDİRME BÖLÜMÜ -->
-        <div class="admin-card border border-indigo" style="border-color: rgba(129, 140, 248, 0.3) !important;">
-            <h4 class="fw-bold mb-2"><i class="fas id fa-list-check me-2" style="color: #818cf8;"></i> Şarkıları Listele ve Seçerek İndir</h4>
-            <p class="text-secondary small mb-4">Arama yap, YouTube'dan çıkan tüm sonuçları gör, istediklerini seçip topluca JSON'a ve arşive ekle.</p>
-            
-            <div class="row g-3 mb-3">
-                <div class="col-md-5">
-                    <input type="text" id="bulkQuery" class="form-control" placeholder="Örn: Manifest şarkıları">
-                </div>
-                <div class="col-md-4">
-                    <input type="text" id="bulkArtist" class="form-control" placeholder="Sanatçı Adı Etiketi">
-                </div>
-                <div class="col-md-3">
-                    <select id="bulkLimit" class="form-select">
-                        <option value="10">10 Sonuç</option>
-                        <option value="15" selected>15 Sonuç</option>
-                        <option value="25">25 Sonuç</option>
-                    </select>
-                </div>
-            </div>
-            <button class="btn btn-custom w-100 py-3 mb-3" onclick="fetchResults()"><i class="fas fa-search me-2"></i> Sonuçları Listele</button>
-
-            <!-- Çıkan Sonuçların Listeleneceği Alan -->
-            <div id="resultsContainer" class="d-none">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="small text-secondary fw-bold" id="resultCountText"></span>
-                    <div>
-                        <button class="btn btn-sm btn-outline-light me-2" onclick="selectAll(true)">Tümünü Seç</button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">Seçimi Kaldır</button>
-                    </div>
-                </div>
-                <div id="resultsList" style="max-height: 350px; overflow-y: auto;" class="mb-3 pe-2"></div>
-                <button class="btn btn-success w-100 py-3 fw-bold shadow" onclick="downloadSelected()"><i class="fas fa-cloud-download-alt me-2"></i> Seçilen Şarkıları İndir ve Siteye Ekle</button>
-            </div>
-
-            <div id="bulkLoading" class="text-center mt-4 d-none">
-                <div class="spinner-border text-indigo" role="status" style="color: #818cf8;"></div>
-                <p class="mt-2 text-secondary fw-bold" id="bulkStatusText">Şarkılar sırayla indiriliyor ve JSON dosyasına işleniyor. Lütfen bekleyin...</p>
-            </div>
-        </div>
-
-        <div class="admin-card">
-            <h4 class="fw-bold mb-3">📚 Sitedeki Şarkılar</h4>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead><tr class="text-secondary small"><th>#</th><th>Şarkı Adı</th><th>Sanatçı</th></tr></thead>
-                    <tbody id="songsTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    let currentUrl = '';
-    let currentTitle = '';
-    let fetchedSongsData = [];
-
-    function login() {
-        const pass = document.getElementById('passwordInput').value;
-        fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({password: pass})
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success) {
-                document.getElementById('loginArea').classList.add('d-none');
-                document.getElementById('adminArea').classList.remove('d-none');
-                loadPublishedSongs();
-            } else {
-                document.getElementById('loginError').classList.remove('d-none');
-            }
-        });
-    }
-
-    function searchYoutube() {
-        const query = document.getElementById('ytSearch').value;
-        if(!query) return alert('Lütfen bir şarkı adı yazın!');
-        fetch('/api/search_youtube?q=' + encodeURIComponent(query))
-        .then(res => res.json())
-        .then(data => {
-            if(data.error) return alert(data.error);
-            document.getElementById('thumbImg').src = data.thumbnail;
-            document.getElementById('songTitle').innerText = data.title;
-            document.getElementById('resultArea').classList.remove('d-none');
-            currentUrl = data.url;
-            currentTitle = data.title;
-        });
-    }
-
-    function downloadAndPublish() {
-        const artist = document.getElementById('artistInput').value.trim() || 'Bilinmiyor';
-        document.getElementById('loadingSpinner').classList.remove('d-none');
-        document.getElementById('resultArea').classList.add('d-none');
-
-        fetch('/api/download', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({url: currentUrl})
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.error) throw new Error(data.error);
-            return fetch('/api/publish', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({title: currentTitle, file: data.file, artist: artist})
-            });
-        })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('loadingSpinner').classList.add('d-none');
-            alert('✅ Şarkı başarıyla eklendi!');
-            document.getElementById('ytSearch').value = '';
-            document.getElementById('artistInput').value = '';
-            loadPublishedSongs();
-        })
-        .catch(err => {
-            document.getElementById('loadingSpinner').classList.add('d-none');
-            alert('❌ Hata: ' + err.message);
-        });
-    }
-
-    function fetchResults() {
-        const query = document.getElementById('bulkQuery').value.trim();
-        const limit = document.getElementById('bulkLimit').value;
-
-        if(!query) return alert('Lütfen arama terimi girin!');
-
-        document.getElementById('bulkLoading').classList.remove('d-none');
-        document.getElementById('bulkStatusText').innerText = "YouTube'dan sonuçlar taranıyor...";
-
-        fetch('/api/fetch_results', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({query: query, limit: limit})
-        })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('bulkLoading').classList.add('d-none');
-            if(data.error) throw new Error(data.error);
-            
-            fetchedSongsData = data.results;
-            const listEl = document.getElementById('resultsList');
-            listEl.innerHTML = '';
-
-            if(fetchedSongsData.length === 0) {
-                alert('Hiç sonuç bulunamadı.');
+            if (!urlInput) {
+                messageDiv.innerHTML = 'Lütfen geçerli bir YouTube linki girin!';
+                messageDiv.className = 'error';
                 return;
             }
 
-            document.getElementById('resultCountText').innerText = `${fetchedSongsData.length} şarkı bulundu. İndirmek istediklerini seç:`;
+            // Butonu kitle ve yükleniyor animasyonu/metni ver
+            btn.disabled = true;
+            btn.innerText = "Şarkı Çekiliyor... (Bekleyin)";
+            messageDiv.innerHTML = '⏳ Şarkı sunucuya indiriliyor, bu işlem şarkı uzunluğuna göre biraz sürebilir...';
+            messageDiv.className = 'loading';
 
-            fetchedSongsData.forEach((song, index) => {
-                listEl.innerHTML += `
-                    <div class="result-item d-flex align-items-center justify-content-between">
-                        <div class="form-check d-flex align-items-center gap-3 w-100">
-                            <input class="form-check-input song-checkbox" type="checkbox" value="${index}" id="songCheck${index}" checked style="width: 20px; height: 20px; cursor: pointer;">
-                            <label class="form-check-label text-truncate text-light fw-medium w-100" for="songCheck${index}" style="cursor: pointer;" title="${song.title}">
-                                ${song.title}
-                            </label>
-                        </div>
-                    </div>
-                `;
-            });
+            try {
+                const response = await fetch('/api/add-song', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: urlInput })
+                });
 
-            document.getElementById('resultsContainer').classList.remove('d-none');
-        })
-        .catch(err => {
-            document.getElementById('bulkLoading').classList.add('d-none');
-            alert('❌ Hata: ' + err.message);
-        });
-    }
+                const data = await response.json();
 
-    function selectAll(status) {
-        document.querySelectorAll('.song-checkbox').forEach(cb => cb.checked = status);
-    }
-
-    function downloadSelected() {
-        const checkboxes = document.querySelectorAll('.song-checkbox:checked');
-        if(checkboxes.length === 0) return alert('Lütfen en az bir şarkı seçin!');
-
-        const artist = document.getElementById('bulkArtist').value.trim() || document.getElementById('bulkQuery').value.trim();
-        const selectedSongs = [];
-
-        checkboxes.forEach(cb => {
-            selectedSongs.push(fetchedSongsData[cb.value]);
-        });
-
-        document.getElementById('resultsContainer').classList.add('d-none');
-        document.getElementById('bulkLoading').classList.remove('d-none');
-        document.getElementById('bulkStatusText').innerText = `${selectedSongs.length} şarkı sırayla indiriliyor ve JSON'a işleniyor, lütfen bekleyin...`;
-
-        fetch('/api/download_batch', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({songs: selectedSongs, artist: artist})
-        })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('bulkLoading').classList.add('d-none');
-            if(data.error) throw new Error(data.error);
-            alert(`✅ Başarıyla ${data.added.length} şarkı indirildi, JSON dosyasına ve siteye eklendi!`);
-            document.getElementById('bulkQuery').value = '';
-            document.getElementById('bulkArtist').value = '';
-            loadPublishedSongs();
-        })
-        .catch(err => {
-            document.getElementById('bulkLoading').classList.add('d-none');
-            alert('❌ İndirme hatası: ' + err.message);
-        });
-    }
-
-    function loadPublishedSongs() {
-        fetch('/api/songs')
-        .then(res => res.json())
-        .then(songs => {
-            const tbody = document.getElementById('songsTableBody');
-            tbody.innerHTML = '';
-            if(songs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-secondary py-3">Henüz şarkı eklenmemiş.</td></tr>`;
-                return;
+                if (data.success) {
+                    messageDiv.innerHTML = `✅ Başarılı! <strong>${data.song.title}</strong> sisteme eklendi.`;
+                    messageDiv.className = 'success';
+                    document.getElementById('songUrl').value = ''; // İşlem bitince kutuyu boşalt
+                } else {
+                    messageDiv.innerHTML = `❌ Hata: ${data.message}`;
+                    messageDiv.className = 'error';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '❌ Sunucuyla bağlantı kurulamadı. İnternetini veya sunucu durumunu kontrol et.';
+                messageDiv.className = 'error';
+            } finally {
+                // İşlem bittiğinde butonu tekrar aktif et
+                btn.disabled = false;
+                btn.innerText = "İndir ve Ekle";
             }
-            songs.slice().reverse().forEach(s => {
-                tbody.innerHTML += `<tr><td class="text-secondary">${s.id}</td><td class="fw-bold">${s.title}</td><td><span class="badge bg-dark border border-secondary text-light px-3 py-2 rounded-pill">${s.artist}</span></td></tr>`;
-            });
-        });
-    }
-</script>
+        }
+    </script>
+
 </body>
 </html>
