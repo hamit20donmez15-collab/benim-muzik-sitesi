@@ -48,7 +48,6 @@ def login():
 def get_songs():
     return jsonify(load_songs())
 
-# GELİŞTİRİLMİŞ YOUTUBE ARAMA MOTORU
 @app.route('/api/search-youtube', methods=['POST'])
 def search_youtube():
     data = request.get_json() or {}
@@ -86,6 +85,7 @@ def search_youtube():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# FFMPEG GEREKTİRMEYEN GÜVENLİ İNDİRME MOTORU
 @app.route('/api/download-song', methods=['POST'])
 def download_song():
     data = request.get_json() or {}
@@ -93,10 +93,10 @@ def download_song():
     
     if not url: return jsonify({'success': False, 'message': 'URL gerekli!'}), 400
 
+    # FFmpeg hatası vermemesi için doğrudan en iyi ses formatını (m4a/webm) indiriyoruz
     ydl_opts = {
-        'format': 'bestaudio/best',
+        'format': 'bestaudio',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),
-        'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}],
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True
@@ -109,7 +109,8 @@ def download_song():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             video_id = str(info.get('id'))
-            filename = f"{video_id}.mp3"
+            ext = info.get('ext', 'm4a')
+            filename = f"{video_id}.{ext}"
             
             song_data = {
                 'id': video_id,
@@ -142,13 +143,12 @@ def delete_song(song_id):
     save_songs(updated_songs)
     return jsonify({'success': True})
 
-# TÜM ARŞİVİ SIFIRLAMA (NÜKLEER BUTON)
 @app.route('/api/clear-all', methods=['DELETE'])
 def clear_all():
-    save_songs([]) # JSON dosyasını sıfırla
+    save_songs([])
     files = glob.glob(os.path.join(DOWNLOAD_DIR, '*'))
     for f in files:
-        try: os.remove(f) # İndirilen MP3'leri sil
+        try: os.remove(f)
         except: pass
     return jsonify({'success': True, 'message': 'Tüm arşiv sıfırlandı!'})
 
