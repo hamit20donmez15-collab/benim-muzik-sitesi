@@ -5,129 +5,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yönetici Paneli</title>
     <style>
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #121212;
             color: #ffffff;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 30px 10px;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
         }
         .container {
             background-color: #1e1e1e;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
             width: 100%;
-            max-width: 600px;
-            box-sizing: border-box;
+            max-width: 550px;
         }
         h1, h2 { text-align: center; color: #1db954; margin-top: 0; }
+        label { font-size: 14px; color: #b3b3b3; display: block; margin-bottom: 5px; }
         input[type="text"], input[type="password"] {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0 15px 0;
+            padding: 12px 15px;
+            margin-bottom: 15px;
             border: 1px solid #333;
             background-color: #2a2a2a;
             color: white;
-            border-radius: 5px;
-            box-sizing: border-box;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
         }
+        input:focus { border-color: #1db954; }
         button {
             width: 100%;
             padding: 12px;
             background-color: #1db954;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
             font-size: 15px;
+            transition: background 0.2s;
         }
         button:hover { background-color: #1ed760; }
-        button.delete-btn {
+        button:disabled { background-color: #444; cursor: not-allowed; }
+        
+        .delete-btn {
             background-color: #e74c3c;
             width: auto;
             padding: 6px 12px;
-            font-size: 13px;
+            font-size: 12px;
         }
-        button.delete-btn:hover { background-color: #c0392b; }
-        #message {
-            margin: 10px 0;
+        .delete-btn:hover { background-color: #c0392b; }
+
+        .status-msg {
+            margin: 15px 0;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 6px;
             text-align: center;
+            font-size: 14px;
             display: none;
         }
-        .success { color: #1db954; background: rgba(29, 185, 84, 0.1); }
-        .error { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); }
-        .loading { color: #ffeb3b; background: rgba(255, 235, 59, 0.1); }
-        
-        .song-list { margin-top: 20px; }
+        .success { color: #1db954; background: rgba(29, 185, 84, 0.1); display: block; }
+        .error { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); display: block; }
+        .loading { color: #ffeb3b; background: rgba(255, 235, 59, 0.1); display: block; }
+
+        .song-list { margin-top: 15px; max-height: 250px; overflow-y: auto; }
         .song-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: #2a2a2a;
-            padding: 10px 15px;
+            padding: 10px 12px;
             margin-bottom: 8px;
-            border-radius: 5px;
+            border-radius: 6px;
         }
-        .song-info { font-size: 14px; max-width: 80%; }
-        .song-title { font-weight: bold; color: #fff; }
+        .song-info { max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-title { font-size: 14px; font-weight: bold; color: #fff; }
         .song-artist { font-size: 12px; color: #aaa; }
-        
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .logout-btn {
-            background: #444;
-            width: auto;
-            padding: 6px 12px;
-        }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logout-btn { background: #333; width: auto; padding: 6px 12px; font-size: 12px; }
+        .logout-btn:hover { background: #555; }
     </style>
 </head>
 <body>
 
-    <!-- ŞİFRE GİRİŞ EKRANI -->
+    <!-- ŞİFRE EKRANI -->
     <div id="loginSection" class="container">
-        <h1>🔒 Admin Girişi</h1>
-        <p style="text-align: center; color: #aaa;">Devam etmek için yönetici şifresini girin.</p>
-        <input type="password" id="adminPassword" placeholder="Şifrenizi girin...">
+        <h1>🔒 Yönetici Girişi</h1>
+        <p style="text-align: center; color: #aaa; font-size: 14px;">Panele erişmek için şifreyi girin.</p>
+        <input type="password" id="adminPassword" placeholder="Şifreniz...">
         <button onclick="login()">Giriş Yap</button>
-        <div id="loginMessage" id="message"></div>
+        <div id="loginMessage" class="status-msg"></div>
     </div>
 
-    <!-- PANEL EKRANI (GİRİŞ YAPILINCA AÇILIR) -->
+    <!-- YÖNETİM PANELİ -->
     <div id="panelSection" class="container" style="display: none;">
         <div class="top-bar">
-            <h2>🎵 Şarkı Yönetimi</h2>
-            <button class="logout-btn" onclick="logout()">Çıkış</button>
+            <h2>🎵 Şarkı Paneli</h2>
+            <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
         </div>
 
-        <label style="font-weight: bold;">YouTube Şarkı Linki:</label>
+        <label for="songUrl">YouTube Şarkı Linki:</label>
         <input type="text" id="songUrl" placeholder="https://www.youtube.com/watch?v=...">
-        <button id="addBtn" onclick="addSong()">Şarkıyı İndir ve Ekle</button>
-        <div id="message"></div>
+        <button id="addBtn" onclick="addSong()">Şarkıyı Çek ve Ekle</button>
+        <div id="statusMessage" class="status-msg"></div>
 
-        <hr style="border-color: #333; margin: 25px 0;">
+        <hr style="border-color: #333; margin: 20px 0;">
 
-        <h3>Mevcut Şarkılar</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:16px;">Kütüphanedeki Şarkılar</h3>
+            <input type="text" id="searchInput" onkeyup="filterSongs()" placeholder="Şarkı ara..." style="width:140px; padding:6px; margin:0; font-size:12px;">
+        </div>
+
         <div id="songList" class="song-list">
-            <p style="color: #aaa;">Şarkılar yükleniyor...</p>
+            <p style="color: #aaa; text-align: center;">Yükleniyor...</p>
         </div>
 
         <br>
-        <a href="/" style="color: #1db954; text-decoration: none; display: block; text-align: center;">← Ana Sayfaya Dön</a>
+        <a href="/" style="color: #1db954; text-decoration: none; display: block; text-align: center; font-size: 14px;">← Ana Sayfaya Dön</a>
     </div>
 
     <script>
-        const API_PASS = "182015hd";
+        let allSongs = [];
 
         window.onload = function() {
             if (localStorage.getItem("adminAuth") === "true") {
@@ -151,12 +156,12 @@
                     localStorage.setItem("adminAuth", "true");
                     showPanel();
                 } else {
-                    msg.style.display = "block";
-                    msg.className = "error";
+                    msg.className = "status-msg error";
                     msg.innerText = "Hatalı Şifre!";
                 }
             } catch (err) {
-                alert("Bağlantı hatası!");
+                msg.className = "status-msg error";
+                msg.innerText = "Sunucuya bağlanılamadı!";
             }
         }
 
@@ -174,14 +179,13 @@
 
         async function addSong() {
             const urlInput = document.getElementById('songUrl').value.trim();
-            const messageDiv = document.getElementById('message');
+            const msg = document.getElementById('statusMessage');
             const btn = document.getElementById('addBtn');
 
-            if (!urlInput) return alert("URL girin!");
+            if (!urlInput) return alert("Lütfen geçerli bir YouTube URL'si girin!");
 
-            messageDiv.style.display = 'block';
-            messageDiv.className = 'loading';
-            messageDiv.innerHTML = '⏳ Şarkı indiriliyor...';
+            msg.className = 'status-msg loading';
+            msg.innerHTML = '⏳ Şarkı indiriliyor, lütfen bekleyin...';
             btn.disabled = true;
 
             try {
@@ -193,17 +197,17 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    messageDiv.className = 'success';
-                    messageDiv.innerHTML = '✅ Şarkı başarıyla eklendi!';
+                    msg.className = 'status-msg success';
+                    msg.innerHTML = '✅ Şarkı başarıyla eklendi!';
                     document.getElementById('songUrl').value = '';
                     loadSongs();
                 } else {
-                    messageDiv.className = 'error';
-                    messageDiv.innerHTML = '❌ Hata: ' + data.message;
+                    msg.className = 'status-msg error';
+                    msg.innerHTML = '❌ Hata: ' + data.message;
                 }
             } catch (err) {
-                messageDiv.className = 'error';
-                messageDiv.innerHTML = '❌ İndirme hatası!';
+                msg.className = 'status-msg error';
+                msg.innerHTML = '❌ Bağlantı hatası oluştu!';
             } finally {
                 btn.disabled = false;
             }
@@ -213,25 +217,38 @@
             const listDiv = document.getElementById("songList");
             try {
                 const res = await fetch('/api/songs');
-                const songs = await res.json();
-
-                if (songs.length === 0) {
-                    listDiv.innerHTML = '<p style="color: #aaa;">Henüz şarkı eklenmemiş.</p>';
-                    return;
-                }
-
-                listDiv.innerHTML = songs.map(song => `
-                    <div class="song-item">
-                        <div class="song-info">
-                            <div class="song-title">${song.title}</div>
-                            <div class="song-artist">${song.artist || 'Bilinmeyen Sanatçı'}</div>
-                        </div>
-                        <button class="delete-btn" onclick="deleteSong('${song.id}')">Sil</button>
-                    </div>
-                `).join('');
+                allSongs = await res.json();
+                renderSongs(allSongs);
             } catch (err) {
-                listDiv.innerHTML = '<p style="color: red;">Şarkılar yüklenemedi.</p>';
+                listDiv.innerHTML = '<p style="color: red; text-align: center;">Şarkılar yüklenemedi.</p>';
             }
+        }
+
+        function renderSongs(songs) {
+            const listDiv = document.getElementById("songList");
+            if (songs.length === 0) {
+                listDiv.innerHTML = '<p style="color: #aaa; text-align: center;">Henüz şarkı yok.</p>';
+                return;
+            }
+
+            listDiv.innerHTML = songs.map(song => `
+                <div class="song-item">
+                    <div class="song-info">
+                        <div class="song-title">${song.title}</div>
+                        <div class="song-artist">${song.artist || 'Bilinmeyen Sanatçı'}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteSong('${song.id}')">Sil</button>
+                </div>
+            `).join('');
+        }
+
+        function filterSongs() {
+            const query = document.getElementById("searchInput").value.toLowerCase();
+            const filtered = allSongs.filter(s => 
+                s.title.toLowerCase().includes(query) || 
+                (s.artist && s.artist.toLowerCase().includes(query))
+            );
+            renderSongs(filtered);
         }
 
         async function deleteSong(songId) {
