@@ -62,23 +62,32 @@ def add_song():
     if not url:
         return jsonify({'success': False, 'message': 'URL gerekli!'}), 400
 
-    # Render ortamında takılmaması için doğrudan ses akışını indirir
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True
     }
 
+    # Eğer ana dizinde cookies.txt varsa, bot engelini aşmak için kullan
+    if os.path.exists('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
+            filename = os.path.splitext(filename)[0] + '.mp3'
             relative_filename = os.path.basename(filename)
 
             song_data = {
-                'id': str(info.get('id', relative_filename)),
+                'id': str(info.get('id')),
                 'title': info.get('title', 'Bilinmeyen Şarkı'),
                 'artist': info.get('uploader', 'Bilinmeyen Sanatçı'),
                 'url': f'/downloads/{relative_filename}',
@@ -87,7 +96,6 @@ def add_song():
             }
 
             songs = load_songs()
-            # Aynı şarkı daha önce eklenmişse güncelle
             songs = [s for s in songs if s.get('id') != song_data['id']]
             songs.append(song_data)
             save_songs(songs)
