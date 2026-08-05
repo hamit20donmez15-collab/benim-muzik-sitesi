@@ -39,23 +39,57 @@ def admin():
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
-    password = data.get('password')
-    if password == ADMIN_PASSWORD:
-        return jsonify({'success': True, 'message': 'Giriş başarılı'})
+    if data.get('password') == ADMIN_PASSWORD:
+        return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Hatalı şifre!'}), 401
 
 @app.route('/api/songs', methods=['GET'])
 def get_songs():
     return jsonify(load_songs())
 
-@app.route('/api/artists', methods=['GET'])
-def get_artists():
-    songs = load_songs()
-    artists = list(set(song.get('artist', 'Bilinmeyen Sanatçı') for song in songs if song.get('artist')))
-    return jsonify(artists)
+# YouTube'da arama yapıp şarkı listesi getiren uç nokta (Örn: "Manifest")
+@app.route('/api/search-youtube', methods=['POST'])
+def search_youtube():
+    data = request.get_json() or {}
+    query = data.get('query')
+    limit = int(data.get('limit', 10))
+    if limit > 25:
+        limit = 25
 
-@app.route('/api/add-song', methods=['POST'])
-def add_song():
+    if not query:
+        return jsonify({'success': False, 'message': 'Arama terimi gerekli!'}), 400
+
+    ydl_opts = {
+        'extract_flat': True,
+        'quiet': True,
+        'no_warnings': True,
+        'nocheckcertificate': True
+    }
+    
+    if os.path.exists('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # YouTube'da arama yapıp sonuçları toplar
+            search_results = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
+            entries = search_results.get('entries', [])
+            
+            results = []
+            for entry in entries:
+                results.append({
+                    'id': entry.get('id'),
+                    'title': entry.get('title'),
+                    'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
+                    'duration': entry.get('duration', 0)
+                })
+            return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Seçilen YouTube linkini indirip arşive ekleyen uç nokta
+@app.route('/api/download-song', methods=['POST'])
+def download_song():
     data = request.get_json() or {}
     url = data.get('url')
     
@@ -64,7 +98,7 @@ def add_song():
 
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
+        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -75,23 +109,21 @@ def add_song():
         'nocheckcertificate': True
     }
 
-    # Eğer ana dizinde cookies.txt varsa, bot engelini aşmak için kullan
     if os.path.exists('cookies.txt'):
         ydl_opts['cookiefile'] = 'cookies.txt'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            filename = os.path.splitext(filename)[0] + '.mp3'
-            relative_filename = os.path.basename(filename)
-
+            video_id = str(info.get('id'))
+            filename = f"{video_id}.mp3"
+            
             song_data = {
-                'id': str(info.get('id')),
+                'id': video_id,
                 'title': info.get('title', 'Bilinmeyen Şarkı'),
                 'artist': info.get('uploader', 'Bilinmeyen Sanatçı'),
-                'url': f'/downloads/{relative_filename}',
-                'filename': relative_filename,
+                'url': f'/downloads/{filename}',
+                'filename': filename,
                 'duration': info.get('duration', 0)
             }
 
@@ -104,30 +136,27 @@ def add_song():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/delete-song/<song_id>', methods=['DELETE', 'POST'])
+@app.route('/api/delete-song/<song_id>', methods=['DELETE'])
 def delete_song(song_id):
     songs = load_songs()
-    song_to_delete = None
     updated_songs = []
+    deleted = False
 
     for song in songs:
-        if str(song.get('id')) == str(song_id) or song.get('title') == song_id:
-            song_to_delete = song
+        if str(song.get('id')) == str(song_id):
+            deleted = True
+            filepath = os.path.join(DOWNLOAD_DIR, song.get('filename', ''))
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except:
+                    pass
         else:
             updated_songs.append(song)
 
-    if song_to_delete:
-        filename = song_to_delete.get('filename') or os.path.basename(song_to_delete.get('url', ''))
-        filepath = os.path.join(DOWNLOAD_DIR, filename)
-        if os.path.exists(filepath):
-            try:
-                os.remove(filepath)
-            except Exception:
-                pass
-        
+    if deleted:
         save_songs(updated_songs)
-        return jsonify({'success': True, 'message': 'Şarkı başarıyla silindi'})
-    
+        return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Şarkı bulunamadı'}), 404
 
 @app.route('/downloads/<filename>')
