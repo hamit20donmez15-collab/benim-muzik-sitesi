@@ -27,7 +27,7 @@
         }
         h1, h2 { text-align: center; color: #1db954; margin-top: 0; }
         label { font-size: 14px; color: #b3b3b3; display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="password"] {
+        input[type="password"], textarea, input[type="text"] {
             width: 100%;
             padding: 12px 15px;
             margin-bottom: 15px;
@@ -37,8 +37,9 @@
             border-radius: 6px;
             font-size: 14px;
             outline: none;
+            resize: vertical;
         }
-        input:focus { border-color: #1db954; }
+        input:focus, textarea:focus { border-color: #1db954; }
         button {
             width: 100%;
             padding: 12px;
@@ -54,36 +55,16 @@
         button:hover { background-color: #1ed760; }
         button:disabled { background-color: #444; cursor: not-allowed; }
         
-        .delete-btn {
-            background-color: #e74c3c;
-            width: auto;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
+        .delete-btn { background-color: #e74c3c; width: auto; padding: 6px 12px; font-size: 12px; }
         .delete-btn:hover { background-color: #c0392b; }
 
-        .status-msg {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 14px;
-            display: none;
-        }
+        .status-msg { margin: 15px 0; padding: 10px; border-radius: 6px; text-align: center; font-size: 14px; display: none; }
         .success { color: #1db954; background: rgba(29, 185, 84, 0.1); display: block; }
         .error { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); display: block; }
         .loading { color: #ffeb3b; background: rgba(255, 235, 59, 0.1); display: block; }
 
         .song-list { margin-top: 15px; max-height: 250px; overflow-y: auto; }
-        .song-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #2a2a2a;
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-        }
+        .song-item { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; }
         .song-info { max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .song-title { font-size: 14px; font-weight: bold; color: #fff; }
         .song-artist { font-size: 12px; color: #aaa; }
@@ -95,7 +76,6 @@
 </head>
 <body>
 
-    <!-- ŞİFRE EKRANI -->
     <div id="loginSection" class="container">
         <h1>🔒 Yönetici Girişi</h1>
         <p style="text-align: center; color: #aaa; font-size: 14px;">Panele erişmek için şifreyi girin.</p>
@@ -104,16 +84,15 @@
         <div id="loginMessage" class="status-msg"></div>
     </div>
 
-    <!-- YÖNETİM PANELİ -->
     <div id="panelSection" class="container" style="display: none;">
         <div class="top-bar">
             <h2>🎵 Şarkı Paneli</h2>
             <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
         </div>
 
-        <label for="songUrl">YouTube Şarkı Linki:</label>
-        <input type="text" id="songUrl" placeholder="https://www.youtube.com/watch?v=...">
-        <button id="addBtn" onclick="addSong()">Şarkıyı Çek ve Ekle</button>
+        <label for="songUrls">YouTube Şarkı Linkleri (Her satıra 1 link):</label>
+        <textarea id="songUrls" rows="4" placeholder="https://www.youtube.com/watch?v=123&#10;https://www.youtube.com/watch?v=456"></textarea>
+        <button id="addBtn" onclick="addSong()">Şarkıları Çek ve Ekle</button>
         <div id="statusMessage" class="status-msg"></div>
 
         <hr style="border-color: #333; margin: 20px 0;">
@@ -178,39 +157,60 @@
         }
 
         async function addSong() {
-            const urlInput = document.getElementById('songUrl').value.trim();
+            const urlsInput = document.getElementById('songUrls').value.trim();
             const msg = document.getElementById('statusMessage');
             const btn = document.getElementById('addBtn');
 
-            if (!urlInput) return alert("Lütfen geçerli bir YouTube URL'si girin!");
+            if (!urlsInput) return alert("Lütfen en az bir YouTube URL'si girin!");
 
-            msg.className = 'status-msg loading';
-            msg.innerHTML = '⏳ Şarkı indiriliyor, lütfen bekleyin...';
+            // Linkleri satır satır böl ve boşlukları temizle
+            const urls = urlsInput.split('\n').map(u => u.trim()).filter(u => u !== '');
+            
             btn.disabled = true;
+            let successCount = 0;
+            let errorCount = 0;
+            let lastError = "";
 
-            try {
-                const res = await fetch('/api/add-song', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: urlInput })
-                });
-                const data = await res.json();
+            msg.style.display = 'block';
 
-                if (data.success) {
-                    msg.className = 'status-msg success';
-                    msg.innerHTML = '✅ Şarkı başarıyla eklendi!';
-                    document.getElementById('songUrl').value = '';
-                    loadSongs();
-                } else {
-                    msg.className = 'status-msg error';
-                    msg.innerHTML = '❌ Hata: ' + data.message;
+            for (let i = 0; i < urls.length; i++) {
+                msg.className = 'status-msg loading';
+                msg.innerHTML = `⏳ ${i + 1}/${urls.length} indiriliyor. Lütfen sayfayı kapatmayın...`;
+
+                try {
+                    const res = await fetch('/api/add-song', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: urls[i] })
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        lastError = data.message;
+                    }
+                } catch (err) {
+                    errorCount++;
+                    lastError = "Bağlantı hatası.";
                 }
-            } catch (err) {
-                msg.className = 'status-msg error';
-                msg.innerHTML = '❌ Bağlantı hatası oluştu!';
-            } finally {
-                btn.disabled = false;
             }
+
+            if (errorCount === 0) {
+                msg.className = 'status-msg success';
+                msg.innerHTML = `✅ Tüm şarkılar başarıyla eklendi! (${successCount} adet)`;
+            } else {
+                msg.className = 'status-msg error';
+                msg.innerHTML = `İşlem bitti. ✅ ${successCount} başarılı, ❌ ${errorCount} hatalı.<br>Son hata: ${lastError}`;
+            }
+
+            if (successCount > 0) {
+                document.getElementById('songUrls').value = '';
+                loadSongs();
+            }
+            
+            btn.disabled = false;
         }
 
         async function loadSongs() {
