@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müzik Kütüphanesi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { 
+            background: #090d16; 
+            color: #f8fafc; 
+            min-height: 100vh; 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+            padding-bottom: 60px;
+        }
+        .hero-section { padding: 50px 0 30px 0; }
+        .hero-title { font-weight: 800; letter-spacing: -1px; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .search-box {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            padding: 8px 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        .search-input { background: transparent; border: none; color: #fff; font-size: 1.05rem; box-shadow: none !important; }
+        .search-input::placeholder { color: #64748b; }
+
+        .nav-pills .nav-link { 
+            color: #94a3b8; 
+            background: rgba(30, 41, 59, 0.5); 
+            margin: 4px; 
+            border-radius: 30px; 
+            padding: 10px 22px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.25s ease;
+        }
+        .nav-pills .nav-link:hover { color: #fff; background: rgba(51, 65, 85, 0.8); }
+        .nav-pills .nav-link.active { 
+            background: linear-gradient(135deg, #6366f1, #8b5cf6); 
+            color: #fff; 
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            border-color: transparent;
+        }
+
+        .song-card { 
+            background: rgba(30, 41, 59, 0.4); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid rgba(255, 255, 255, 0.07); 
+            border-radius: 24px; 
+            padding: 24px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .song-card:hover { 
+            transform: translateY(-6px); 
+            border-color: rgba(129, 140, 248, 0.3);
+            box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.3);
+            background: rgba(30, 41, 59, 0.7);
+        }
+        
+        .album-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        audio { width: 100%; height: 38px; border-radius: 20px; filter: invert(0.9) hue-rotate(180deg); opacity: 0.85; }
+        audio::-webkit-media-controls-panel { background-color: #0f172a; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="text-center hero-section">
+        <h1 class="hero-title display-4 mb-2"><i class="fas fa-compact-disc fa-spin" style="animation-duration: 10s;"></i> Müzik Kütüphanesi</h1>
+        <p class="text-secondary fs-5">Favori müziklerini keşfet ve kesintisiz dinle</p>
+    </div>
+
+    <!-- Arama Çubuğu -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-7 col-lg-5">
+            <div class="search-box d-flex align-items-center">
+                <i class="fas fa-search text-secondary ms-2 me-3 fs-5"></i>
+                <input type="text" id="searchInput" class="form-control search-input" placeholder="Şarkı veya sanatçı ara..." oninput="handleSearch()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtreler -->
+    <div class="tab-container text-center mb-5">
+        <ul class="nav nav-pills justify-content-center flex-wrap" id="artistTabs">
+            <li class="nav-item"><a class="nav-link active" data-artist="all" href="#" onclick="filterSongs('all')">🔥 Tüm Şarkılar</a></li>
+        </ul>
+    </div>
+
+    <!-- Şarkı Listesi -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="songGrid"></div>
+</div>
+
+<script>
+    let allSongs = [];
+    let currentArtist = 'all';
+
+    function loadSongs() {
+        fetch('/api/songs')
+        .then(res => res.json())
+        .then(songs => {
+            allSongs = songs;
+            loadArtists();
+            renderSongs();
+        })
+        .catch(() => {
+            document.getElementById('songGrid').innerHTML = `<div class="col-12 text-center text-danger p-5"><h4>⚠️ Sunucuya bağlanılamıyor!</h4></div>`;
+        });
+    }
+
+    function loadArtists() {
+        fetch('/api/artists')
+        .then(res => res.json())
+        .then(artists => {
+            const tabs = document.getElementById('artistTabs');
+            while(tabs.children.length > 1) tabs.removeChild(tabs.lastChild);
+            artists.forEach(artist => {
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                li.innerHTML = `<a class="nav-link" data-artist="${artist}" href="#" onclick="filterSongs('${artist}')"><i class="fas fa-microphone-alt me-1"></i> ${artist}</a>`;
+                tabs.appendChild(li);
+            });
+        });
+    }
+
+    function filterSongs(artist) {
+        currentArtist = artist;
+        document.querySelectorAll('#artistTabs .nav-link').forEach(tab => tab.classList.remove('active'));
+        const activeTab = document.querySelector(`#artistTabs .nav-link[data-artist="${artist}"]`);
+        if(activeTab) activeTab.classList.add('active');
+        renderSongs();
+    }
+
+    function handleSearch() {
+        renderSongs();
+    }
+
+    function renderSongs() {
+        const grid = document.getElementById('songGrid');
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        grid.innerHTML = '';
+        
+        let filtered = allSongs;
+        if(currentArtist !== 'all') filtered = filtered.filter(s => s.artist === currentArtist);
+        if(query) filtered = filtered.filter(s => s.title.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query));
+
+        if(filtered.length === 0) {
+            grid.innerHTML = `<div class="col-12 text-center text-muted py-5"><i class="fas fa-music fa-3x mb-3 text-secondary"></i><h4>Aradığınız kriterlere uygun şarkı bulunamadı.</h4></div>`;
+            return;
+        }
+
+        filtered.slice().reverse().forEach(song => {
+            const col = document.createElement('div');
+            col.className = 'col';
+            col.innerHTML = `
+                <div class="song-card h-100 d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="album-icon me-3 flex-shrink-0">
+                            <i class="fas fa-play"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h5 class="fw-bold text-truncate mb-1 text-white" title="${song.title}">${song.title}</h5>
+                            <p class="text-secondary small mb-0 text-truncate"><i class="fas fa-user-circle me-1"></i> ${song.artist}</p>
+                        </div>
+                    </div>
+                    <div class="mt-2 pt-2 border-top border-secondary border-opacity-10">
+                        <audio controls preload="none">
+                            <source src="/downloads/${encodeURIComponent(song.file)}" type="audio/mpeg">
+                        </audio>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+    }
+
+    loadSongs();
+</script>
+</body>
+</html>
