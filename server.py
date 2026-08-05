@@ -3,11 +3,12 @@ import json
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import yt_dlp
+from waitress import serve
 
 app = Flask(__name__, template_folder='.', static_folder='.')
 CORS(app)
 
-SONGS_FILE = 'şarkılar.json'
+SONGS_FILE = 'songs.json'
 DOWNLOAD_DIR = 'downloads'
 
 if not os.path.exists(DOWNLOAD_DIR):
@@ -32,7 +33,7 @@ def index():
 
 @app.route('/admin')
 def admin():
-    return render_template('yönetici.html')
+    return render_template('admin.html')
 
 @app.route('/api/songs', methods=['GET'])
 def get_songs():
@@ -85,6 +86,5 @@ def download_file(filename):
     return send_from_directory(DOWNLOAD_DIR, filename)
 
 if __name__ == '__main__':
-    # Render'ın verdiği PORT değişkenini okur, bulamazsa varsayılan 5000'i kullanır
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    serve(app, host='0.0.0.0', port=port)
