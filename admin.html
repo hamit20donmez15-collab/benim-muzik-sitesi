@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yönetici Paneli</title>
+    <title>Yönetici Paneli - YouTube Arama ve İndirme</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -23,11 +23,11 @@
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
             width: 100%;
-            max-width: 550px;
+            max-width: 650px;
         }
         h1, h2 { text-align: center; color: #1db954; margin-top: 0; }
         label { font-size: 14px; color: #b3b3b3; display: block; margin-bottom: 5px; }
-        input[type="password"], textarea, input[type="text"] {
+        input[type="text"], input[type="password"], select {
             width: 100%;
             padding: 12px 15px;
             margin-bottom: 15px;
@@ -37,9 +37,8 @@
             border-radius: 6px;
             font-size: 14px;
             outline: none;
-            resize: vertical;
         }
-        input:focus, textarea:focus { border-color: #1db954; }
+        input:focus, select:focus { border-color: #1db954; }
         button {
             width: 100%;
             padding: 12px;
@@ -63,7 +62,10 @@
         .error { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); display: block; }
         .loading { color: #ffeb3b; background: rgba(255, 235, 59, 0.1); display: block; }
 
-        .song-list { margin-top: 15px; max-height: 250px; overflow-y: auto; }
+        .search-results { max-height: 250px; overflow-y: auto; margin-top: 15px; background: #252525; padding: 10px; border-radius: 6px; }
+        .result-item { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; }
+        
+        .song-list { margin-top: 15px; max-height: 220px; overflow-y: auto; }
         .song-item { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; }
         .song-info { max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .song-title { font-size: 14px; font-weight: bold; color: #fff; }
@@ -76,32 +78,45 @@
 </head>
 <body>
 
+    <!-- ŞİFRE EKRANI -->
     <div id="loginSection" class="container">
         <h1>🔒 Yönetici Girişi</h1>
-        <p style="text-align: center; color: #aaa; font-size: 14px;">Panele erişmek için şifreyi girin.</p>
         <input type="password" id="adminPassword" placeholder="Şifreniz...">
         <button onclick="login()">Giriş Yap</button>
         <div id="loginMessage" class="status-msg"></div>
     </div>
 
+    <!-- YÖNETİM PANELİ -->
     <div id="panelSection" class="container" style="display: none;">
         <div class="top-bar">
-            <h2>🎵 Şarkı Paneli</h2>
+            <h2>🎵 YouTube Şarkı Bul ve İndir</h2>
             <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
         </div>
 
-        <label for="songUrls">YouTube Şarkı Linkleri (Her satıra 1 link):</label>
-        <textarea id="songUrls" rows="4" placeholder="https://www.youtube.com/watch?v=123&#10;https://www.youtube.com/watch?v=456"></textarea>
-        <button id="addBtn" onclick="addSong()">Şarkıları Çek ve Ekle</button>
+        <label for="searchQuery">Grup / Sanatçı veya Şarkı Adı:</label>
+        <input type="text" id="searchQuery" placeholder="Örn: Manifest">
+
+        <label for="resultLimit">Kaç tane şarkı getirilsin? (Maksimum 25):</label>
+        <select id="resultLimit">
+            <option value="10" selected>10 Şarkı</option>
+            <option value="15">15 Şarkı</option>
+            <option value="20">20 Şarkı</option>
+            <option value="25">25 Şarkı</option>
+        </select>
+
+        <button id="searchBtn" onclick="searchYouTubeSongs()">YouTube'da Ara</button>
         <div id="statusMessage" class="status-msg"></div>
+
+        <!-- Arama Sonuçları ve Toplu İndirme Alanı -->
+        <div id="resultsContainer" style="display:none;">
+            <h3 style="font-size:15px; margin:15px 0 5px 0;">Bulunan Şarkılar (Seçip İndir)</h3>
+            <div id="searchResults" class="search-results"></div>
+            <button onclick="downloadAllFound()" style="margin-top: 10px; background-color: #2ecc71;">Listelenen Hepsini İndir</button>
+        </div>
 
         <hr style="border-color: #333; margin: 20px 0;">
 
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:16px;">Kütüphanedeki Şarkılar</h3>
-            <input type="text" id="searchInput" onkeyup="filterSongs()" placeholder="Şarkı ara..." style="width:140px; padding:6px; margin:0; font-size:12px;">
-        </div>
-
+        <h3 style="margin:0 0 10px 0; font-size:16px;">Arşivdeki Şarkılar</h3>
         <div id="songList" class="song-list">
             <p style="color: #aaa; text-align: center;">Yükleniyor...</p>
         </div>
@@ -111,7 +126,7 @@
     </div>
 
     <script>
-        let allSongs = [];
+        let foundSongsCache = [];
 
         window.onload = function() {
             if (localStorage.getItem("adminAuth") === "true") {
@@ -122,14 +137,12 @@
         async function login() {
             const pass = document.getElementById("adminPassword").value;
             const msg = document.getElementById("loginMessage");
-
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: pass })
                 });
-
                 const data = await res.json();
                 if (data.success) {
                     localStorage.setItem("adminAuth", "true");
@@ -140,7 +153,7 @@
                 }
             } catch (err) {
                 msg.className = "status-msg error";
-                msg.innerText = "Sunucuya bağlanılamadı!";
+                msg.innerText = "Bağlantı hatası!";
             }
         }
 
@@ -156,115 +169,144 @@
             loadSongs();
         }
 
-        async function addSong() {
-            const urlsInput = document.getElementById('songUrls').value.trim();
+        async function searchYouTubeSongs() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const limit = document.getElementById('resultLimit').value;
             const msg = document.getElementById('statusMessage');
-            const btn = document.getElementById('addBtn');
+            const btn = document.getElementById('searchBtn');
 
-            if (!urlsInput) return alert("Lütfen en az bir YouTube URL'si girin!");
+            if (!query) return alert("Lütfen bir grup veya şarkı adı yazın!");
 
-            // Linkleri satır satır böl ve boşlukları temizle
-            const urls = urlsInput.split('\n').map(u => u.trim()).filter(u => u !== '');
-            
+            msg.className = 'status-msg loading';
+            msg.innerHTML = '⏳ YouTube\'da aranıyor, lütfen bekleyin...';
             btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/search-youtube', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, limit: parseInt(limit) })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    foundSongsCache = data.results;
+                    renderSearchResults(foundSongsCache);
+                    msg.className = 'status-msg success';
+                    msg.innerHTML = `✅ ${foundSongsCache.length} şarkı bulundu!`;
+                    document.getElementById('resultsContainer').style.display = 'block';
+                } else {
+                    msg.className = 'status-msg error';
+                    msg.innerHTML = '❌ Hata: ' + data.message;
+                }
+            } catch (err) {
+                msg.className = 'status-msg error';
+                msg.innerHTML = '❌ Arama sırasında hata oluştu!';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function renderSearchResults(songs) {
+            const container = document.getElementById('searchResults');
+            if (songs.length === 0) {
+                container.innerHTML = '<p style="color:#aaa; text-align:center;">Şarkı bulunamadı.</p>';
+                return;
+            }
+            container.innerHTML = songs.map((s, idx) => `
+                <div class="result-item">
+                    <span style="max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${idx+1}. ${s.title}</span>
+                    <button onclick="downloadSingle('${s.url}')" style="width: auto; padding: 4px 10px; font-size: 11px;">İndir</button>
+                </div>
+            `).join('');
+        }
+
+        async function downloadSingle(url) {
+            const msg = document.getElementById('statusMessage');
+            msg.className = 'status-msg loading';
+            msg.innerHTML = '⏳ Şarkı indiriliyor ve arşive ekleniyor...';
+
+            try {
+                const res = await fetch('/api/download-song', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msg.className = 'status-msg success';
+                    msg.innerHTML = `✅ "${data.song.title}" başarıyla eklendi!`;
+                    loadSongs();
+                } else {
+                    alert("İndirilemedi: " + data.message);
+                }
+            } catch (err) {
+                alert("İndirme hatası!");
+            }
+        }
+
+        async function downloadAllFound() {
+            if (foundSongsCache.length === 0) return;
+            const msg = document.getElementById('statusMessage');
+            
             let successCount = 0;
-            let errorCount = 0;
-            let lastError = "";
-
-            msg.style.display = 'block';
-
-            for (let i = 0; i < urls.length; i++) {
+            for (let i = 0; i < foundSongsCache.length; i++) {
                 msg.className = 'status-msg loading';
-                msg.innerHTML = `⏳ ${i + 1}/${urls.length} indiriliyor. Lütfen sayfayı kapatmayın...`;
-
+                msg.innerHTML = `⏳ Toplu İndiriliyor: ${i+1}/${foundSongsCache.length} işleniyor...`;
+                
                 try {
-                    const res = await fetch('/api/add-song', {
+                    const res = await fetch('/api/download-song', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: urls[i] })
+                        body: JSON.stringify({ url: foundSongsCache[i].url })
                     });
                     const data = await res.json();
-
-                    if (data.success) {
-                        successCount++;
-                    } else {
-                        errorCount++;
-                        lastError = data.message;
-                    }
-                } catch (err) {
-                    errorCount++;
-                    lastError = "Bağlantı hatası.";
-                }
+                    if (data.success) successCount++;
+                } catch (e) {}
             }
 
-            if (errorCount === 0) {
-                msg.className = 'status-msg success';
-                msg.innerHTML = `✅ Tüm şarkılar başarıyla eklendi! (${successCount} adet)`;
-            } else {
-                msg.className = 'status-msg error';
-                msg.innerHTML = `İşlem bitti. ✅ ${successCount} başarılı, ❌ ${errorCount} hatalı.<br>Son hata: ${lastError}`;
-            }
-
-            if (successCount > 0) {
-                document.getElementById('songUrls').value = '';
-                loadSongs();
-            }
-            
-            btn.disabled = false;
+            msg.className = 'status-msg success';
+            msg.innerHTML = `✅ Toplu indirme tamamlandı! ${successCount} şarkı arşive eklendi.`;
+            loadSongs();
         }
 
         async function loadSongs() {
             const listDiv = document.getElementById("songList");
             try {
                 const res = await fetch('/api/songs');
-                allSongs = await res.json();
-                renderSongs(allSongs);
+                const songs = await res.json();
+                
+                if (songs.length === 0) {
+                    listDiv.innerHTML = '<p style="color: #aaa; text-align: center;">Arşivde hiç şarkı yok (Sıfırlandı).</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = songs.map(song => `
+                    <div class="song-item">
+                        <div class="song-info">
+                            <div class="song-title">${song.title}</div>
+                            <div class="song-artist">${song.artist || 'Bilinmeyen'}</div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteSong('${song.id}')">Sil</button>
+                    </div>
+                `).join('');
             } catch (err) {
                 listDiv.innerHTML = '<p style="color: red; text-align: center;">Şarkılar yüklenemedi.</p>';
             }
         }
 
-        function renderSongs(songs) {
-            const listDiv = document.getElementById("songList");
-            if (songs.length === 0) {
-                listDiv.innerHTML = '<p style="color: #aaa; text-align: center;">Henüz şarkı yok.</p>';
-                return;
-            }
-
-            listDiv.innerHTML = songs.map(song => `
-                <div class="song-item">
-                    <div class="song-info">
-                        <div class="song-title">${song.title}</div>
-                        <div class="song-artist">${song.artist || 'Bilinmeyen Sanatçı'}</div>
-                    </div>
-                    <button class="delete-btn" onclick="deleteSong('${song.id}')">Sil</button>
-                </div>
-            `).join('');
-        }
-
-        function filterSongs() {
-            const query = document.getElementById("searchInput").value.toLowerCase();
-            const filtered = allSongs.filter(s => 
-                s.title.toLowerCase().includes(query) || 
-                (s.artist && s.artist.toLowerCase().includes(query))
-            );
-            renderSongs(filtered);
-        }
-
         async function deleteSong(songId) {
             if (!confirm("Bu şarkıyı silmek istediğinize emin misiniz?")) return;
-
             try {
                 const res = await fetch(`/api/delete-song/${songId}`, { method: 'DELETE' });
                 const data = await res.json();
-
                 if (data.success) {
                     loadSongs();
                 } else {
-                    alert("Silinemedi: " + data.message);
+                    alert("Silinemedi!");
                 }
             } catch (err) {
-                alert("Silme işleminde hata oluştu!");
+                alert("Hata oluştu!");
             }
         }
     </script>
