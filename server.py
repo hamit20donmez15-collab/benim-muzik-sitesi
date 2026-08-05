@@ -10,6 +10,7 @@ CORS(app)
 
 SONGS_FILE = 'songs.json'
 DOWNLOAD_DIR = 'downloads'
+ADMIN_PASSWORD = "182015hd" # Buraya kendi şifreni yazabilirsin
 
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
@@ -35,11 +36,21 @@ def index():
 def admin():
     return render_template('admin.html')
 
+# Hata aldığın login (Giriş) rotası eklendi
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    password = data.get('password')
+    
+    if password == ADMIN_PASSWORD:
+        return jsonify({'success': True, 'message': 'Giriş başarılı'})
+    else:
+        return jsonify({'success': False, 'message': 'Hatalı şifre'}), 401
+
 @app.route('/api/songs', methods=['GET'])
 def get_songs():
     return jsonify(load_songs())
 
-# Sanatçı listesini çeken eksik uç nokta eklendi
 @app.route('/api/artists', methods=['GET'])
 def get_artists():
     songs = load_songs()
@@ -92,7 +103,6 @@ def add_song():
 def download_file(filename):
     return send_from_directory(DOWNLOAD_DIR, filename)
 
-# Favicon hatasını engellemek için eklendi
 @app.route('/favicon.ico')
 def favicon():
     return '', 204
