@@ -1,4 +1,3 @@
-Flask
-flask-cors
-yt-dlp
-waitress
+flask==2.3.3
+yt-dlp==2025.7.22
+waitress==3.0.0
